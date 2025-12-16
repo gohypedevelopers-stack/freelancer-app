@@ -26,18 +26,14 @@ class AuthSelectionScreen extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                       // Logo Placeholder
-                       Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Icon(
-                          Icons.work_outline,
-                          size: 50,
-                          color: AppColors.background,
+                       // Logo
+                       ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.cover,
                         ),
                        ),
                        const SizedBox(height: 32),

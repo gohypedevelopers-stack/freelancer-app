@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _apiClient = ApiClient();
   bool _isLoading = false;
+  bool _obscureText = true;
 
   Future<void> _handleLogin() async {
     setState(() => _isLoading = true);
@@ -87,7 +88,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 label: 'Password',
                 hint: '••••••••',
                 controller: _passwordController,
-                isPassword: true,
+                isPassword: _obscureText,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureText ? Icons.visibility_off : Icons.visibility,
+                    color: AppColors.textSecondary,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscureText = !_obscureText;
+                    });
+                  },
+                ),
               ),
               const SizedBox(height: 32),
               SizedBox(
