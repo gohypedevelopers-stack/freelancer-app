@@ -3,9 +3,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiClient {
-  // Use 10.0.2.2 for Android Emulator to access host localhost
-  // Use localhost for iOS simulator
-  static const String baseUrl = 'http://10.0.2.2:5000/api'; 
+  // Production URL
+  static const String baseUrl = 'https://freelancer-er4u.vercel.app/api'; 
   
   static const String _tokenKey = 'freelancer.accessToken';
   static const String _userKey = 'freelancer.user';
