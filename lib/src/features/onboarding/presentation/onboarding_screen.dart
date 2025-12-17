@@ -57,7 +57,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               alignment: Alignment.topRight,
               child: TextButton(
                 onPressed: _navigateToAuth,
-                child: const Text(AppStrings.skip, style: TextStyle(color: AppColors.textSecondary)),
+                child: Text(AppStrings.skip, style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color)),
               ),
             ),
             Expanded(
@@ -90,7 +90,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         decoration: BoxDecoration(
                           color: _currentPage == index
                               ? AppColors.primary
-                              : AppColors.card,
+                              : Theme.of(context).dividerColor,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),

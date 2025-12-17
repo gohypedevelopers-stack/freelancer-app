@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:freelancer_flutter/src/core/theme/app_theme.dart';
+import 'package:freelancer_flutter/src/core/theme/theme_provider.dart';
 import 'package:freelancer_flutter/src/features/onboarding/presentation/onboarding_screen.dart';
 
 class MyApp extends StatelessWidget {
@@ -7,11 +9,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Freelancer',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme, // Default to dark theme for premium feel
-      home: const OnboardingScreen(),
+    return ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Freelancer',
+            debugShowCheckedModeBanner: false,
+            theme: themeProvider.isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme,
+            home: const OnboardingScreen(),
+          );
+        },
+      ),
     );
   }
 }

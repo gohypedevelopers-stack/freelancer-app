@@ -56,33 +56,212 @@ class ApiClient {
 
   Future<Map<String, dynamic>> fetchMetrics(String role) async {
     final token = await _getToken();
-     if (token == null) throw Exception('No token found');
-     
-    // Mocking metrics response for now as endpoints might differ
-    // React app calls /projects or /proposals based on role
-    // For MVP, we'll return a basic structure to display UI
-    
-    // In a real app, you'd match the React logic: 
-    // Client: GET /projects
-    // Freelancer: GET /proposals?as=freelancer
-    
-    await Future.delayed(const Duration(milliseconds: 500)); // Sim network
+    if (token == null) throw Exception('No token found');
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
 
     if (role == 'CLIENT') {
+      // Clients: fetch projects to calculate metrics
+      final response = await http.get(
+        Uri.parse('$baseUrl/projects'),
+        headers: headers,
+      );
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(response.body);
+        final List projects = body['data'] ?? [];
+        
+        final active = projects.where((p) => (p['status'] ?? '').toString().toUpperCase() == 'OPEN').length;
+        final completed = projects.where((p) => (p['status'] ?? '').toString().toUpperCase() == 'COMPLETED').length;
+        int proposalsSent = 0;
+        int totalSpend = 0;
+        
+        for (var project in projects) {
+          final proposals = project['proposals'] as List? ?? [];
+          proposalsSent += proposals.length;
+          final hasAccepted = proposals.any((pr) => (pr['status'] ?? '').toString().toUpperCase() == 'ACCEPTED');
+          if (hasAccepted) {
+            totalSpend += (int.tryParse(project['budget']?.toString() ?? '0') ?? 0);
+          }
+        }
+        
         return {
-            'active_projects': '3',
-            'completed_projects': '12',
-            'proposals_sent': '5',
-            'total_spend': '₹45,000',
+          'active_projects': active.toString(),
+          'completed_projects': completed.toString(),
+          'proposals_sent': proposalsSent.toString(),
+          'total_spend': '₹${totalSpend.toString()}',
         };
+      }
     } else {
-         return {
-            'active_projects': '2',
-            'proposals_received': '8',
-            'accepted_proposals': '4',
-            'total_earnings': '₹24,000',
+      // Freelancers: fetch proposals to calculate metrics
+      final response = await http.get(
+        Uri.parse('$baseUrl/proposals?as=freelancer'),
+        headers: headers,
+      );
+      
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(response.body);
+        final List proposals = body['data'] ?? [];
+        
+        final pending = proposals.where((p) => (p['status'] ?? '').toString().toUpperCase() == 'PENDING').length;
+        final accepted = proposals.where((p) => (p['status'] ?? '').toString().toUpperCase() == 'ACCEPTED').length;
+        int earnings = 0;
+        
+        for (var proposal in proposals) {
+          if ((proposal['status'] ?? '').toString().toUpperCase() == 'ACCEPTED') {
+            earnings += (int.tryParse(proposal['amount']?.toString() ?? '0') ?? 0);
+          }
+        }
+        
+        return {
+          'active_projects': accepted.toString(),
+          'proposals_received': pending.toString(),
+          'accepted_proposals': accepted.toString(),
+          'total_earnings': '₹${earnings.toString()}',
         };
+      }
     }
+    
+    // Fallback if API call fails
+    return {
+      'active_projects': '0',
+      'completed_projects': '0',
+      'proposals_sent': '0',
+      'total_spend': '₹0',
+    };
+  }
+
+  /// Fetch projects for the current user
+  /// - Clients: All their created projects
+  /// - Freelancers: Projects where their proposal was accepted
+  Future<List<Map<String, dynamic>>> fetchProjects(String role) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('No token found');
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    if (role == 'FREELANCER') {
+      // Freelancers: Get accepted proposals and extract project info
+      final response = await http.get(
+        Uri.parse('$baseUrl/proposals'),
+        headers: headers,
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(response.body);
+        final List proposals = body['data'] ?? body ?? [];
+        
+        // Filter accepted proposals and extract project data
+        List<Map<String, dynamic>> acceptedProjects = [];
+        for (var p in proposals) {
+          if ((p['status'] ?? '').toString().toUpperCase() == 'ACCEPTED') {
+            final project = p['project'] as Map<String, dynamic>? ?? {};
+            acceptedProjects.add({
+              'id': project['id'] ?? p['projectId'],
+              'title': project['title'] ?? 'Assigned Project',
+              'budget': p['amount'] ?? project['budget'] ?? 0,
+              'status': project['status'] ?? 'ACTIVE',
+              'deadline': project['deadline'] ?? '',
+            });
+          }
+        }
+        
+        return acceptedProjects;
+      }
+      return [];
+    } else {
+      // Clients: Get their created projects
+      final response = await http.get(
+        Uri.parse('$baseUrl/projects'),
+        headers: headers,
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final body = jsonDecode(response.body);
+        final List data = body['data'] ?? body ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    }
+  }
+
+  /// Fetch proposals (activity) for the current user
+  Future<List<Map<String, dynamic>>> fetchProposals() async {
+    final token = await _getToken();
+    if (token == null) throw Exception('No token found');
+
+    final response = await http.get(
+      Uri.parse('$baseUrl/proposals'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      final body = jsonDecode(response.body);
+      final List data = body['data'] ?? body ?? [];
+      return data.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
+
+  /// Fetch profile stats (projects count, proposals count, etc.)
+  Future<Map<String, dynamic>> fetchProfileStats(String role) async {
+    final token = await _getToken();
+    if (token == null) throw Exception('No token found');
+
+    final headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    int projectsCount = 0;
+    int completedCount = 0;
+    int proposalsCount = 0;
+
+    try {
+      // Fetch projects
+      final projectsResponse = await http.get(
+        Uri.parse('$baseUrl/projects'),
+        headers: headers,
+      );
+      
+      if (projectsResponse.statusCode >= 200 && projectsResponse.statusCode < 300) {
+        final body = jsonDecode(projectsResponse.body);
+        final List projects = body['data'] ?? body ?? [];
+        projectsCount = projects.length;
+        completedCount = projects.where((p) => 
+          (p['status'] ?? '').toString().toUpperCase() == 'COMPLETED'
+        ).length;
+      }
+
+      // Fetch proposals
+      final proposalsResponse = await http.get(
+        Uri.parse('$baseUrl/proposals'),
+        headers: headers,
+      );
+      
+      if (proposalsResponse.statusCode >= 200 && proposalsResponse.statusCode < 300) {
+        final body = jsonDecode(proposalsResponse.body);
+        final List proposals = body['data'] ?? body ?? [];
+        proposalsCount = proposals.length;
+      }
+    } catch (e) {
+      // Silently fail, return zeros
+    }
+
+    return {
+      'projects': projectsCount.toString(),
+      'completed': completedCount.toString(),
+      'proposals': proposalsCount.toString(),
+    };
   }
 
   Future<String?> _getToken() async {

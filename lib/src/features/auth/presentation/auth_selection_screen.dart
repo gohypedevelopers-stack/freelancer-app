@@ -14,7 +14,7 @@ class AuthSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 48.0),
@@ -40,7 +40,7 @@ class AuthSelectionScreen extends StatelessWidget {
                        Text(
                         AppStrings.authTitle,
                         style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          color: AppColors.textPrimary,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
                         ),
                        ),
                        const SizedBox(height: 16),
@@ -48,7 +48,7 @@ class AuthSelectionScreen extends StatelessWidget {
                         AppStrings.authDesc,
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColors.textSecondary,
+                          color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                        ),
                     ],
@@ -70,8 +70,8 @@ class AuthSelectionScreen extends StatelessWidget {
                 child: OutlinedButton(
                   onPressed: () => _navigateTo(context, const LoginScreen()),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: const BorderSide(color: AppColors.border),
+                    foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
+                    side: BorderSide(color: Theme.of(context).dividerColor),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),

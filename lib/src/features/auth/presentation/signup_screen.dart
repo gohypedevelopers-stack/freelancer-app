@@ -52,12 +52,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: theme.textTheme.bodyLarge?.color),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -67,16 +68,16 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               Text(
                 'Create your account',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      color: theme.textTheme.bodyLarge?.color,
                     ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Enter your details below to create your account',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.textTheme.bodyMedium?.color,
                     ),
               ),
               const SizedBox(height: 32),
@@ -104,13 +105,13 @@ class _SignupScreenState extends State<SignupScreen> {
               // Role Selection (Simple dropdown or toggle)
               DropdownButtonFormField<String>(
                 value: _selectedRole,
-                dropdownColor: AppColors.card,
-                style: const TextStyle(color: AppColors.textPrimary),
+                dropdownColor: theme.cardColor,
+                style: TextStyle(color: theme.textTheme.bodyLarge?.color),
                 decoration: InputDecoration(
                   labelText: 'I want to...',
-                  labelStyle: const TextStyle(color: AppColors.textSecondary),
+                  labelStyle: TextStyle(color: theme.textTheme.bodyMedium?.color),
                   filled: true,
-                  fillColor: AppColors.card,
+                  fillColor: theme.cardColor,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 items: const [
@@ -137,12 +138,12 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 24),
               Row(
                 children: [
-                  const Expanded(child: Divider(color: AppColors.border)),
+                  Expanded(child: Divider(color: theme.dividerColor)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Text('Or continue with', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+                    child: Text('Or continue with', style: theme.textTheme.bodySmall?.copyWith(color: theme.textTheme.bodyMedium?.color)),
                   ),
-                  const Expanded(child: Divider(color: AppColors.border)),
+                  Expanded(child: Divider(color: theme.dividerColor)),
                 ],
               ),
               const SizedBox(height: 24),
@@ -151,8 +152,8 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: OutlinedButton(
                   onPressed: () {}, // Google Auth placeholder
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: const BorderSide(color: AppColors.border),
+                    foregroundColor: theme.textTheme.bodyLarge?.color,
+                    side: BorderSide(color: theme.dividerColor),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),

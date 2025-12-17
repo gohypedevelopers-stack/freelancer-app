@@ -19,7 +19,7 @@ class OnboardingContent extends StatelessWidget {
             height: 300,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Icon(
@@ -33,7 +33,7 @@ class OnboardingContent extends StatelessWidget {
             item.title,
             style: Theme.of(context).textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).textTheme.displaySmall?.color,
                 ),
             textAlign: TextAlign.center,
           ),
@@ -41,7 +41,7 @@ class OnboardingContent extends StatelessWidget {
           Text(
             item.description,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).textTheme.bodyLarge?.color,
                 ),
             textAlign: TextAlign.center,
           ),
