@@ -5,6 +5,7 @@ import 'package:freelancer_flutter/src/core/api/api_client.dart';
 import 'package:freelancer_flutter/src/core/constants/app_colors.dart';
 import 'package:freelancer_flutter/src/core/theme/theme_provider.dart';
 import 'package:freelancer_flutter/src/features/auth/presentation/auth_selection_screen.dart';
+import 'package:freelancer_flutter/src/features/auth/domain/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _apiClient = ApiClient();
-  Map<String, dynamic>? _user;
+  UserModel? _user;
   Map<String, dynamic>? _stats;
   bool _isLoading = true;
 
@@ -29,7 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     try {
       final user = await _apiClient.getUser();
-      final role = user['role']?.toString().toUpperCase() ?? 'CLIENT';
+      final role = user.role.toUpperCase();
       final stats = await _apiClient.fetchProfileStats(role);
       
       if (mounted) {
@@ -75,94 +76,151 @@ class _ProfileScreenState extends State<ProfileScreen> {
     
     final theme = Theme.of(context);
 
-    final name = _user?['fullName'] ?? 'User';
-    final email = _user?['email'] ?? '';
-    final role = _user?['role']?.toString().toUpperCase() ?? 'FREELANCER';
-    final phone = _user?['phone'] ?? '';
-    final location = _user?['location'] ?? '';
-    final headline = _user?['headline'] ?? (role == 'FREELANCER' ? 'Freelancer' : 'Client');
-    final skills = List<String>.from(_user?['skills'] ?? []);
+    final name = _user?.fullName ?? 'User';
+    final email = _user?.email ?? '';
+    final role = _user?.role.toUpperCase() ?? 'FREELANCER';
+    // UserModel doesn't have phone/location yet based on my previous creation, checking model...
+    // I created the model with: id, email, fullName, role, status, bio, skills.
+    // Profile screen used 'phone', 'location', 'headline'. I should add them to model or handle missing.
+    // For now I will comment out missing fields or use defaults if they aren't in model.
+    // headline isn't in model, use bio or role. If bio is JSON, try to extract 'headline' or 'location'.
+    String headline = (role == 'FREELANCER' ? 'Freelancer' : 'Client');
+    String location = '';
+    String phone = '';
+
+    if (_user?.bio != null) {
+      try {
+        if (_user!.bio!.trim().startsWith('{')) {
+          final bioMap = jsonDecode(_user!.bio!);
+          if (bioMap is Map) {
+            location = bioMap['location'] ?? '';
+            phone = bioMap['phone'] ?? '';
+            // If there is a headline field in the JSON, use it. Otherwise use services or fallback.
+            if (bioMap['headline'] != null && bioMap['headline'].isNotEmpty) {
+               headline = bioMap['headline'];
+            } else if (bioMap['services'] != null && (bioMap['services'] as List).isNotEmpty) {
+               headline = (bioMap['services'] as List).first.toString();
+            }
+          }
+        } else {
+          headline = _user!.bio!;
+        }
+      } catch (e) {
+        headline = _user!.bio!;
+      }
+    }
+
+    final skills = _user?.skills ?? [];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Header Section
+            // Premium Header Card
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 60, 24, 32),
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 60, 16, 24),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: theme.cardColor,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF1E1E1E),
+                    Colors.black.withOpacity(0.9),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.15),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
-                  // Avatar
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: AppColors.primary,
-                    child: Text(
-                      _getInitials(name),
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                  // Avatar with Gold Ring
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.primary, width: 2),
+                    ),
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: AppColors.primary.withOpacity(0.2),
+                      child: Text(
+                        _getInitials(name),
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Name
+                  
+                  // Name & Headline
                   Text(
                     name,
-                    style: TextStyle(
-                      color: theme.textTheme.bodyLarge?.color,
-                      fontSize: 24,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Headline
                   Text(
                     headline,
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.7),
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+                  
                   const SizedBox(height: 24),
-                  // Stats Row
+                  Divider(color: Colors.white.withOpacity(0.1)),
+                  const SizedBox(height: 16),
+
+                  // Stats (White Text for Contrast)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _StatItem(label: 'Projects', value: _stats?['projects'] ?? '0'),
-                      Container(width: 1, height: 40, color: theme.dividerColor),
-                      _StatItem(label: 'Completed', value: _stats?['completed'] ?? '0'),
-                      Container(width: 1, height: 40, color: theme.dividerColor),
-                      _StatItem(label: 'Proposals', value: _stats?['proposals'] ?? '0'),
+                      _StatItem(label: 'Projects', value: _stats?['projects'] ?? '0', isDarkCard: true),
+                      Container(width: 1, height: 30, color: Colors.white.withOpacity(0.2)),
+                      _StatItem(label: 'Completed', value: _stats?['completed'] ?? '0', isDarkCard: true),
+                      Container(width: 1, height: 30, color: Colors.white.withOpacity(0.2)),
+                      _StatItem(label: 'Proposals', value: _stats?['proposals'] ?? '0', isDarkCard: true),
                     ],
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 24),
-
-            // Contact Info Section
+            // Contact Info
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Contact Information',
-                    style: TextStyle(
-                      color: theme.textTheme.bodyLarge?.color,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 12),
+                    child: Text(
+                      'CONTACT INFO',
+                      style: TextStyle(
+                        color: theme.disabledColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
                   _InfoTile(icon: Icons.email_outlined, label: 'Email', value: email),
                   if (phone.isNotEmpty)
                     _InfoTile(icon: Icons.phone_outlined, label: 'Phone', value: phone),
@@ -174,22 +232,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             const SizedBox(height: 24),
 
-            // Skills Section (for Freelancers)
+            // Skills
             if (role == 'FREELANCER' && skills.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Skills',
-                      style: TextStyle(
-                        color: theme.textTheme.bodyLarge?.color,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                     Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 12),
+                      child: Text(
+                        'SKILLS',
+                        style: TextStyle(
+                          color: theme.disabledColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 16),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
@@ -199,29 +260,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
-            // Settings Section
+            // Settings
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Settings',
-                    style: TextStyle(
-                      color: theme.textTheme.bodyLarge?.color,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, bottom: 12),
+                    child: Text(
+                      'SETTINGS',
+                      style: TextStyle(
+                        color: theme.disabledColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.1,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 16),
                   _SettingsTile(
                     icon: Icons.person_outline,
                     label: 'Edit Profile',
-                    onTap: () {
-                      // TODO: Navigate to Edit Profile
-                    },
+                    onTap: () {},
                   ),
                   _SettingsTile(
                     icon: Icons.notifications_outlined,
@@ -233,53 +295,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     label: 'Security',
                     onTap: () {},
                   ),
-                  _SettingsTile(
-                    icon: Icons.help_outline,
-                    label: 'Help & Support',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 8),
-                  // Theme Toggle
+                  
+                  // Theme Toggle (Styled as tile)
                   Consumer<ThemeProvider>(
                     builder: (context, themeProvider, child) {
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Theme.of(context).dividerColor),
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        margin: const EdgeInsets.only(bottom: 8),
                         child: Row(
                           children: [
-                            Icon(
-                              themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-                              color: Theme.of(context).textTheme.bodyMedium?.color,
-                              size: 22,
+                            Container(
+                               padding: const EdgeInsets.all(8),
+                               decoration: BoxDecoration(
+                                 color: theme.disabledColor.withOpacity(0.1),
+                                 borderRadius: BorderRadius.circular(8),
+                               ),
+                               child: Icon(themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode, size: 20, color: theme.textTheme.bodyMedium?.color)
                             ),
                             const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                'Dark Mode',
-                                style: TextStyle(
-                                  color: Theme.of(context).textTheme.bodyLarge?.color,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
+                            Expanded(child: Text('Dark Mode', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: theme.textTheme.bodyLarge?.color))),
                             Switch(
                               value: themeProvider.isDarkMode,
                               activeColor: AppColors.primary,
-                              onChanged: (value) {
-                                themeProvider.setDarkMode(value);
-                              },
+                              onChanged: (value) => themeProvider.setDarkMode(value),
                             ),
                           ],
                         ),
                       );
                     },
                   ),
+                  
                   _SettingsTile(
                     icon: Icons.logout,
                     label: 'Logout',
@@ -289,7 +345,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-
             const SizedBox(height: 48),
           ],
         ),
@@ -299,22 +354,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
 }
 
 
-
 class _StatItem extends StatelessWidget {
   final String label;
   final String value;
+  final bool isDarkCard;
 
-  const _StatItem({required this.label, required this.value});
+  const _StatItem({required this.label, required this.value, this.isDarkCard = false});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       children: [
         Text(
           value,
           style: TextStyle(
-            color: theme.textTheme.bodyLarge?.color,
+            color: isDarkCard ? Colors.white : Theme.of(context).textTheme.bodyLarge?.color,
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
@@ -323,8 +377,8 @@ class _StatItem extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: theme.textTheme.bodyMedium?.color,
-            fontSize: 12,
+            color: isDarkCard ? Colors.white.withOpacity(0.6) : Theme.of(context).textTheme.bodyMedium?.color,
+            fontSize: 11,
           ),
         ),
       ],
@@ -347,8 +401,14 @@ class _InfoTile extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.dividerColor),
+        borderRadius: BorderRadius.circular(16), // More rounded
+        boxShadow: [
+           BoxShadow(
+             color: Colors.black.withOpacity(0.05),
+             blurRadius: 10,
+             offset: const Offset(0, 4),
+           ),
+        ],
       ),
       child: Row(
         children: [
@@ -365,22 +425,9 @@ class _InfoTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: theme.textTheme.bodyMedium?.color,
-                    fontSize: 12,
-                  ),
-                ),
+                Text(label, style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: theme.textTheme.bodyLarge?.color,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                Text(value, style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 15, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -392,7 +439,6 @@ class _InfoTile extends StatelessWidget {
 
 class _SkillChip extends StatelessWidget {
   final String skill;
-
   const _SkillChip({required this.skill});
 
   @override
@@ -400,16 +446,18 @@ class _SkillChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary, // Solid color for better contrast or stick to outline?
+        // Let's stick to the outline style but polished
+        gradient: LinearGradient(colors: [AppColors.primary.withOpacity(0.2), AppColors.primary.withOpacity(0.05)]),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.5)),
       ),
       child: Text(
         skill,
         style: const TextStyle(
           color: AppColors.primary,
           fontSize: 13,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );
@@ -422,51 +470,58 @@ class _SettingsTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool isDestructive;
 
-  const _SettingsTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.isDestructive = false,
-  });
+  const _SettingsTile({required this.icon, required this.label, required this.onTap, this.isDestructive = false});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.dividerColor),
-        ),
-        margin: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: isDestructive ? Colors.red : theme.textTheme.bodyMedium?.color,
-              size: 22,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isDestructive ? Colors.red : theme.textTheme.bodyLarge?.color,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
+    final color = isDestructive ? Colors.redAccent : theme.textTheme.bodyLarge?.color;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                   padding: const EdgeInsets.all(8),
+                   decoration: BoxDecoration(
+                     color: isDestructive ? Colors.redAccent.withOpacity(0.1) : theme.disabledColor.withOpacity(0.1),
+                     borderRadius: BorderRadius.circular(8),
+                   ),
+                   child: Icon(icon, size: 20, color: isDestructive ? Colors.redAccent : theme.textTheme.bodyMedium?.color)
                 ),
-              ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: theme.disabledColor, size: 20),
+              ],
             ),
-            Icon(
-              Icons.chevron_right,
-              color: theme.textTheme.bodyMedium?.color,
-              size: 20,
-            ),
-          ],
+          ),
         ),
       ),
     );

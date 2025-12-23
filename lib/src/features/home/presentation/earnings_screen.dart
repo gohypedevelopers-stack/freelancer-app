@@ -102,71 +102,170 @@ class _EarningsScreenState extends State<EarningsScreen> {
             color: AppColors.primary,
             child: Column(
               children: [
+                // Premium Total Earnings Card
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(32),
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF1E1E1E),
+                        Colors.black.withOpacity(0.8),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
-                       Icon(
-                         widget.isFreelancer ? Icons.currency_rupee : Icons.account_balance_wallet_outlined, 
-                         size: 64, 
-                         color: AppColors.primary
+                       Container(
+                         padding: const EdgeInsets.all(16),
+                         decoration: BoxDecoration(
+                           color: AppColors.primary.withOpacity(0.1),
+                           shape: BoxShape.circle,
+                           border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                         ),
+                         child: Icon(
+                           widget.isFreelancer ? Icons.currency_rupee : Icons.account_balance_wallet_outlined, 
+                           size: 40, 
+                           color: AppColors.primary
+                         ),
                        ),
                        const SizedBox(height: 16),
-                       Text(title, style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 16)),
+                       Text(title.toUpperCase(), 
+                         style: TextStyle(
+                           color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6), 
+                           fontSize: 12, 
+                           letterSpacing: 1.2,
+                           fontWeight: FontWeight.bold
+                         )
+                       ),
                        const SizedBox(height: 8),
                        Text(
                          '₹${_totalAmount.toStringAsFixed(2)}',
-                         style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontSize: 36, fontWeight: FontWeight.bold),
+                         style: const TextStyle(
+                           color: Colors.white, 
+                           fontSize: 42, // Larger and bolder
+                           fontWeight: FontWeight.w900,
+                           height: 1.1,
+                         ),
                        ),
                     ],
                   ),
                 ),
+                
+                // Transactions Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "TRANSACTION HISTORY", 
+                      style: TextStyle(
+                        fontSize: 12, 
+                        fontWeight: FontWeight.bold, 
+                        color: theme.disabledColor, 
+                        letterSpacing: 1.1
+                      )
+                    ),
+                  ),
+                ),
+
                 Expanded(
                   child: _transactions.isEmpty
                     ? Center(
-                        child: Text('No transaction history', style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.receipt_long_outlined, size: 64, color: theme.disabledColor.withOpacity(0.2)),
+                            const SizedBox(height: 16),
+                            Text('No transaction history', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                          ],
+                        ),
                       )
                     : ListView.separated(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         itemCount: _transactions.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final item = _transactions[index];
                           return Container(
-                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: theme.cardColor,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: theme.dividerColor),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      item['title'],
-                                      style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.bold),
-                                    ),
-                                    if (item['date'] != '')
-                                      Text(
-                                        item['date'].toString().split('T')[0], // Simple date formatting
-                                        style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 12),
-                                      ),
-                                  ],
-                                ),
-                                Text(
-                                  '${widget.isFreelancer ? '+' : '-'} ₹${item['amount']}',
-                                  style: TextStyle(color: currencyColor, fontWeight: FontWeight.bold, fontSize: 16),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
                                 ),
                               ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(16),
+                                onTap: () {}, // Future: Show transaction details
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: currencyColor.withOpacity(0.1),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: Icon(
+                                              widget.isFreelancer ? Icons.arrow_downward : Icons.arrow_upward,
+                                              size: 18,
+                                              color: currencyColor,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                item['title'],
+                                                style: TextStyle(
+                                                  color: theme.textTheme.bodyLarge?.color, 
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 4),
+                                              if (item['date'] != '')
+                                                Text(
+                                                  item['date'].toString().split('T')[0], 
+                                                  style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5), fontSize: 12),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        '${widget.isFreelancer ? '+' : '-'} ₹${item['amount']}',
+                                        style: TextStyle(color: currencyColor, fontWeight: FontWeight.bold, fontSize: 18),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           );
                         },

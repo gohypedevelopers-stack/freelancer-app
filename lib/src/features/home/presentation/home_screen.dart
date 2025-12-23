@@ -2,18 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:freelancer_flutter/src/core/api/api_client.dart';
 import 'package:freelancer_flutter/src/core/constants/app_colors.dart';
 import 'package:freelancer_flutter/src/features/auth/presentation/auth_selection_screen.dart';
+import 'package:freelancer_flutter/src/features/auth/domain/user_model.dart';
 import 'package:freelancer_flutter/src/features/home/domain/service_model.dart';
 import 'package:freelancer_flutter/src/features/home/presentation/earnings_screen.dart';
+import 'package:freelancer_flutter/src/features/home/presentation/project_detail_screen.dart';
 import 'package:freelancer_flutter/src/features/home/presentation/widgets/category_chip.dart';
 import 'package:freelancer_flutter/src/features/home/presentation/widgets/premium_service_card.dart';
 import 'package:freelancer_flutter/src/core/presentation/widgets/fade_slide_transition.dart';
+import 'package:freelancer_flutter/src/features/chat/presentation/ai_chat_screen.dart';
 import 'package:freelancer_flutter/src/features/home/presentation/projects_list_screen.dart';
 import 'package:freelancer_flutter/src/features/home/presentation/proposals_list_screen.dart';
 import 'package:freelancer_flutter/src/features/home/presentation/widgets/service_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool isGuest;
+  const HomeScreen({super.key, this.isGuest = false});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -21,7 +25,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _apiClient = ApiClient();
-  Map<String, dynamic>? _user;
+  UserModel? _user;
   Map<String, dynamic>? _metrics;
   List<Map<String, dynamic>> _projects = [];
   List<Map<String, dynamic>> _proposals = [];
@@ -35,8 +39,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     try {
+      if (widget.isGuest) {
+        // Guest mode: Skip user data loading
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
       final user = await _apiClient.getUser();
-      final role = user['role']?.toString().toUpperCase() ?? 'CLIENT';
+      final role = user.role.toUpperCase();
       final metrics = await _apiClient.fetchMetrics(role);
       final projects = await _apiClient.fetchProjects(role);
       final proposals = await _apiClient.fetchProposals();
@@ -71,6 +85,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _navigateToChat(String serviceTitle, String serviceDescription) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AIChatScreen(
+          serviceTitle: serviceTitle,
+          serviceDescription: serviceDescription,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -83,8 +108,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    final role = _user?['role']?.toString().toUpperCase() ?? 'CLIENT';
-    final name = _user?['fullName'] ?? 'User';
+    final role = _user?.role.toUpperCase() ?? 'CLIENT';
+    final name = _user?.fullName ?? 'User';
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -104,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Welcome Back,',
+                          widget.isGuest ? 'Welcome Guest,' : 'Welcome Back,',
                           style: TextStyle(
                             color: theme.textTheme.bodyMedium?.color,
                             fontSize: 14,
@@ -113,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          name,
+                          widget.isGuest ? 'Find a Pro' : name,
                           style: TextStyle(
                             color: theme.textTheme.bodyLarge?.color,
                             fontSize: 24,
@@ -122,30 +147,31 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ],
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        // TODO: Navigate to Profile
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary, width: 2),
-                        ),
-                        child: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: AppColors.primary.withOpacity(0.2),
-                          child: Text(
-                            name[0].toUpperCase(),
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+                    if (!widget.isGuest)
+                      GestureDetector(
+                        onTap: () {
+                          // TODO: Navigate to Profile
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: AppColors.primary, width: 2),
+                          ),
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: AppColors.primary.withOpacity(0.2),
+                            child: Text(
+                              name[0].toUpperCase(),
+                              style: TextStyle(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -216,18 +242,21 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 24),
 
               // Metrics Grid
-              FadeSlideTransition(
-                index: 4,
-                child: GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 2.2,
-                  children: _buildMetrics(role),
+              if (!widget.isGuest) ...[
+                FadeSlideTransition(
+                  index: 4,
+                  child: GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 2.2,
+                    children: _buildMetrics(role),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 32),
+              ],
               const SizedBox(height: 32),
               
               // Development Services (Horizontal Scroll)
@@ -258,7 +287,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: _getDevelopmentServices().length,
                         separatorBuilder: (context, index) => const SizedBox(width: 16),
                         itemBuilder: (context, index) {
-                           return PremiumServiceCard(service: _getDevelopmentServices()[index]);
+                           final service = _getDevelopmentServices()[index];
+                           return PremiumServiceCard(
+                             service: service,
+                             onTap: () => _navigateToChat(service.title, service.description ?? ''),
+                           );
                         },
                       ),
                     ),
@@ -268,109 +301,120 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 32),
               
-              // My Projects Section
-              FadeSlideTransition(
-                index: 6,
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('My Projects', style: TextStyle(
-                          color: theme.textTheme.bodyLarge?.color, 
-                          fontWeight: FontWeight.w700, 
-                          fontSize: 18,
-                          letterSpacing: -0.5,
-                        )),
-                        TextButton(
-                          onPressed: () {},
-                          child: const Text('View All', style: TextStyle(color: AppColors.primary)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (_projects.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.dividerColor),
-                        ),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Icon(Icons.folder_open, color: theme.textTheme.bodyMedium?.color, size: 40),
-                              const SizedBox(height: 8),
-                              Text('No projects yet', style: TextStyle(color: AppColors.textSecondary)),
-                            ],
+              if (!widget.isGuest) ...[
+                // My Projects Section
+                FadeSlideTransition(
+                  index: 6,
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('My Projects', style: TextStyle(
+                            color: theme.textTheme.bodyLarge?.color, 
+                            fontWeight: FontWeight.w700, 
+                            fontSize: 18,
+                            letterSpacing: -0.5,
+                          )),
+                          TextButton(
+                            onPressed: () {},
+                            child: const Text('View All', style: TextStyle(color: AppColors.primary)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (_projects.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.dividerColor),
+                          ),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.folder_open, color: theme.textTheme.bodyMedium?.color, size: 40),
+                                const SizedBox(height: 8),
+                                Text('No projects yet', style: TextStyle(color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          height: 150, // Increased height to prevent overflow
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _projects.length,
+                            separatorBuilder: (context, index) => const SizedBox(width: 12),
+                            itemBuilder: (context, index) {
+                              final project = _projects[index];
+                              return _ProjectCard(
+                                project: project,
+                                onTap: () {
+                                  // Navigate to Details
+                                  Navigator.push(
+                                    context, 
+                                    MaterialPageRoute(builder: (context) => ProjectDetailScreen(project: project))
+                                  );
+                                },
+                              );
+                            },
                           ),
                         ),
-                      )
-                    else
-                      SizedBox(
-                        height: 100,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _projects.length,
-                          separatorBuilder: (context, index) => const SizedBox(width: 12),
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 32),
+                
+                // Recent Activity Section
+                FadeSlideTransition(
+                  index: 7,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Recent Activity', style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color, 
+                        fontWeight: FontWeight.w700, 
+                        fontSize: 18,
+                        letterSpacing: -0.5,
+                      )),
+                      const SizedBox(height: 12),
+                      if (_proposals.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: theme.dividerColor),
+                          ),
+                          child: Center(
+                            child: Column(
+                              children: [
+                                Icon(Icons.notifications_none, color: theme.textTheme.bodyMedium?.color, size: 40),
+                                const SizedBox(height: 8),
+                                Text('No recent activity', style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _proposals.take(5).length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
-                            final project = _projects[index];
-                            return _ProjectCard(project: project);
+                            final proposal = _proposals[index];
+                            return _ActivityItem(proposal: proposal);
                           },
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              
-              const SizedBox(height: 32),
-              
-              // Recent Activity Section
-              FadeSlideTransition(
-                index: 7,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Recent Activity', style: TextStyle(
-                      color: theme.textTheme.bodyLarge?.color, 
-                      fontWeight: FontWeight.w700, 
-                      fontSize: 18,
-                      letterSpacing: -0.5,
-                    )),
-                    const SizedBox(height: 12),
-                    if (_proposals.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.dividerColor),
-                        ),
-                        child: Center(
-                          child: Column(
-                            children: [
-                              Icon(Icons.notifications_none, color: theme.textTheme.bodyMedium?.color, size: 40),
-                              const SizedBox(height: 8),
-                              Text('No recent activity', style: TextStyle(color: theme.textTheme.bodyMedium?.color)),
-                            ],
-                          ),
-                        ),
-                      )
-                    else
-                      ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _proposals.take(5).length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final proposal = _proposals[index];
-                          return _ActivityItem(proposal: proposal);
-                        },
-                      ),
-                  ],
-                ),
-              ),
+              ],
               
               const SizedBox(height: 24),
             ],
@@ -416,7 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         _MetricCard(
-          label: 'Proposals',
+          label: 'Proposals Sent',
           value: _metrics!['proposals_sent'],
           icon: Icons.send_outlined,
           onTap: () => Navigator.push(
@@ -617,101 +661,121 @@ class _MetricCard extends StatelessWidget {
 
 class _ProjectCard extends StatelessWidget {
   final Map<String, dynamic> project;
+  final VoidCallback? onTap;
 
-  const _ProjectCard({required this.project});
+  const _ProjectCard({
+    required this.project, 
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final title = project['title'] ?? 'Untitled Project';
     final status = (project['status'] ?? 'OPEN').toString().toUpperCase();
     final budget = project['budget']?.toString() ?? '0';
-    final deadline = project['deadline'] ?? '';
-    
+    // final deadline = project['deadline'] ?? ''; // Removed deadline to save space/reduce clutter if not critical
+
     Color statusColor = AppColors.primary;
-    if (status == 'COMPLETED') statusColor = Colors.green;
-    if (status == 'CLOSED') statusColor = Colors.grey;
+    Color statusBg = AppColors.primary.withOpacity(0.1);
+    
+    if (status == 'COMPLETED') {
+      statusColor = Colors.green;
+      statusBg = Colors.green.withOpacity(0.1);
+    } else if (status == 'IN_PROGRESS') {
+      statusColor = Colors.orange;
+      statusBg = Colors.orange.withOpacity(0.1);
+    } else if (status == 'CLOSED') {
+      statusColor = Colors.grey;
+      statusBg = Colors.grey.withOpacity(0.1);
+    }
 
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Container(
-      width: 240,
-      padding: const EdgeInsets.all(16),
+      width: 260, // Slightly wider
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
-            color: theme.brightness == Brightness.dark ? Colors.black26 : Colors.grey.withOpacity(0.05),
+            color: isDark ? Colors.black26 : Colors.grey.withOpacity(0.05),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            status.replaceAll('_', ' '),
+                            style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        // You can add an icon or date here if needed
+                      ],
                     ),
-                    child: Text(
-                      status,
-                      style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  if (deadline.isNotEmpty)
+                    const SizedBox(height: 12),
                     Text(
-                      deadline,
-                      style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5), fontSize: 11),
+                      title,
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontSize: 16, // Increase size slightly
+                        fontWeight: FontWeight.bold,
+                        height: 1.3,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  color: theme.textTheme.bodyLarge?.color,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  height: 1.3,
+                  ],
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.dividerColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.currency_rupee, color: theme.textTheme.bodyLarge?.color, size: 14),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      budget,
+                      style: TextStyle(
+                        color: theme.textTheme.bodyLarge?.color,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.monetization_on_outlined, color: AppColors.primary, size: 14),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '₹$budget',
-                style: TextStyle(
-                  color: theme.textTheme.bodyLarge?.color,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

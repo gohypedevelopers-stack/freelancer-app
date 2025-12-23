@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:freelancer_flutter/src/core/presentation/widgets/fade_slide_transition.dart';
 import 'package:freelancer_flutter/src/features/home/presentation/widgets/premium_service_card.dart';
 import 'package:freelancer_flutter/src/features/home/domain/service_model.dart';
+import 'package:freelancer_flutter/src/features/chat/presentation/ai_chat_screen.dart';
 
 class ServicesScreen extends StatelessWidget {
   const ServicesScreen({super.key});
@@ -40,7 +41,14 @@ class ServicesScreen extends StatelessWidget {
             child: PremiumServiceCard(
               service: allServices[index],
               onTap: () {
-                // TODO: Navigate to service details
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => AIChatScreen(
+                      serviceTitle: allServices[index].title,
+                      serviceDescription: allServices[index].description ?? '',
+                    ),
+                  ),
+                );
               },
             ),
           );

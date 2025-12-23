@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:freelancer_flutter/src/core/api/api_client.dart';
 import 'package:freelancer_flutter/src/core/constants/app_colors.dart';
+import 'package:freelancer_flutter/src/features/home/presentation/proposal_detail_screen.dart';
 
 class ProposalsListScreen extends StatefulWidget {
   const ProposalsListScreen({super.key});
@@ -67,65 +68,162 @@ class _ProposalsListScreenState extends State<ProposalsListScreen> {
                       final proposal = _proposals[index];
                       final status = (proposal['status'] ?? 'PENDING').toString().toUpperCase();
                       final projectTitle = proposal['project']?['title'] ?? proposal['projectId'] ?? 'Project';
+                      final amount = proposal['amount'] ?? 0;
                       
-                      Color statusColor = Colors.orange;
-                      if (status == 'ACCEPTED') statusColor = Colors.green;
-                      if (status == 'REJECTED') statusColor = Colors.red;
-
                       return Container(
-                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 16),
                         decoration: BoxDecoration(
-                          color: theme.cardColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: theme.dividerColor),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    projectTitle,
-                                    style: TextStyle(
-                                      color: theme.textTheme.bodyLarge?.color,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: statusColor.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    status,
-                                    style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Bid Amount: ₹${proposal['amount'] ?? 0}',
-                              style: TextStyle(color: theme.textTheme.bodyMedium?.color),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              proposal['coverLetter'] ?? '',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 12),
+                          // Subtle gradient for premium feel
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.cardColor,
+                              theme.cardColor.withOpacity(0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: theme.dividerColor.withOpacity(0.1), width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
                             ),
                           ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ProposalDetailScreen(proposal: proposal),
+                                ),
+                              ).then((_) => _loadProposals());
+                            },
+                            borderRadius: BorderRadius.circular(20),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Top Row: Date and Status
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(Icons.calendar_today_outlined, size: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            _formatDate(proposal['createdAt']),
+                                            style: TextStyle(fontSize: 11, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5), fontWeight: FontWeight.w500),
+                                          ),
+                                        ],
+                                      ),
+                                      _buildStatusBadge(status),
+                                    ],
+                                  ),
+                                  
+                                  const SizedBox(height: 8),
+                                  
+                                  // Title
+                                  Text(
+                                    projectTitle,
+                                    style: TextStyle(
+                                      fontSize: 18, 
+                                      fontWeight: FontWeight.bold, 
+                                      color: theme.textTheme.bodyLarge?.color,
+                                      height: 1.2,
+                                    ),
+                                  ),
+                                  
+                                  const SizedBox(height: 12),
+                                  
+                                  // Bid Amount (Compact badge)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: theme.scaffoldBackgroundColor.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text("BID:", style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.disabledColor)),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          "₹$amount",
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.primary),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  
+                                  const SizedBox(height: 8),
+                                  // Cover Letter Snippet
+                                  if (proposal['coverLetter'] != null)
+                                    Text(
+                                      proposal['coverLetter'],
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6)),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       );
                     },
                   ),
                 ),
     );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    Color bg;
+    
+    switch (status) {
+      case 'ACCEPTED':
+        color = Colors.green;
+        bg = Colors.green.withOpacity(0.2);
+        break;
+      case 'REJECTED':
+        color = Colors.red;
+        bg = Colors.red.withOpacity(0.2);
+        break;
+      case 'PENDING':
+      default:
+        color = Colors.orange;
+        bg = Colors.orange.withOpacity(0.2);
+        break;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  String _formatDate(String? dateStr) {
+    if (dateStr == null) return '';
+    try {
+      final date = DateTime.parse(dateStr);
+      return "${date.day}/${date.month}/${date.year}";
+    } catch (e) {
+      return '';
+    }
   }
 }
